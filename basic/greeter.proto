@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+service Greeter {
+    rpc SayHelloMethod (SayHelloMethodRequest) returns (SayHelloMethodResponse);
+    rpc SayHelloAgainMethod (SayHelloAgainMethodRequest) returns (SayHelloAgainMethodResponse);
+}
+
+
+message SayHelloMethodRequest {
+    string name = 1;
+}
+
+message SayHelloMethodResponse {
+    string message = 1;
+}
+
+message Detail {
+    string first_name = 1;
+    string last_name = 2;
+}
+
+message SayHelloAgainMethodRequest{
+    Detail detail = 1;
+}
+
+message SayHelloAgainMethodResponse{
+    string message = 1;
+}
