@@ -5,7 +5,7 @@ from google.protobuf import json_format
 import logging
 from typing import Dict, Any, List, Tuple
 from fastapi.middleware.cors import CORSMiddleware
-
+from icecream import ic
 # Import your generated proto modules
 from protos import user_pb2_grpc, user_pb2
 
@@ -47,6 +47,21 @@ GRPC_SERVICES = {
             }
         },
     },
+    "AuthService": {
+        "endpoint_prefix": "/api/authservice",
+        "methods": {
+            "RefreshToken": {
+                "path": "/refresh-token",
+                "request_class": auth_pb2.User,
+                "response_class": auth_pb2.RefreshTokenResponse
+            },
+            "GenerateToken": {
+                "path": "/generate-token",
+                "request_class": auth_pb2.User,
+                "response_class": auth_pb2.TokenResponse
+            }
+        }
+    }
 }
 
 # gRPC client stub cache
