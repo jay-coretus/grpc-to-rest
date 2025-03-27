@@ -7,6 +7,7 @@ from typing import Dict, Any, List, Tuple
 from fastapi.middleware.cors import CORSMiddleware
 from icecream import ic
 # Import your generated proto modules
+from leobrain_protos_new.auth_service import auth_pb2
 from protos import user_pb2_grpc, user_pb2
 
 # FastAPI app instance
