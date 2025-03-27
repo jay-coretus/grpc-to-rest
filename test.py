@@ -1,7 +1,8 @@
+from fastapi import Request
 from leobrain_protos_new.user_service import user_pb2_grpc, user_pb2
 from leobrain_protos_new.auth_service import auth_pb2_grpc, auth_pb2
 from icecream import ic
-
+import grpc
 
 GRPC_SERVICES = {
     "UserService": {
@@ -48,9 +49,26 @@ GRPC_SERVICES = {
 
 client_stubs = {}
 services = []
-for service, data in GRPC_SERVICES.items():
-    services.append(service)
-    ic(service, data)
+# for service, data in GRPC_SERVICES.items():
+#     services.append(service)
+#     ic(service, data)
 
-# ic(services)
-# ic(hasattr(GRPC_SERVICES, "UserService"))
+channel = grpc.insecure_channel("localhost:50052")
+client_stubs["UserService"] = user_pb2_grpc.UserServiceStub(channel)
+stub = client_stubs.get("UserService")
+ic(stub)
+service_name = "UserService"
+method_name = "SignIn"
+method_cfg = GRPC_SERVICES[service_name]["methods"][method_name]
+ic(method_cfg)
+request: Request = {
+    "email": "jay.gokani@coretus.com",
+    "password": "Password@123"
+}
+metadata = []
+grpc_method = getattr(stub, method_name)
+ic(grpc_method)
+grpc_request = method_cfg["request_class"](**request)
+ic(grpc_request)
+grpc_response, call_details = grpc_method.with_call(grpc_request, metadata=metadata)
+ic(grpc_response, call_details)
