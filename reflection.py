@@ -1,6 +1,36 @@
 import grpc
+from google.protobuf import descriptor_pb2
 from google.protobuf.descriptor_pool import DescriptorPool
 from leobrain_protos_new.user_service import user_pb2
+
+# Mapping of protobuf field types to human-readable strings
+FIELD_TYPES = {
+    descriptor_pb2.FieldDescriptorProto.TYPE_DOUBLE: "double",
+    descriptor_pb2.FieldDescriptorProto.TYPE_FLOAT: "float",
+    descriptor_pb2.FieldDescriptorProto.TYPE_INT64: "int64",
+    descriptor_pb2.FieldDescriptorProto.TYPE_UINT64: "uint64",
+    descriptor_pb2.FieldDescriptorProto.TYPE_INT32: "int32",
+    descriptor_pb2.FieldDescriptorProto.TYPE_FIXED64: "fixed64",
+    descriptor_pb2.FieldDescriptorProto.TYPE_FIXED32: "fixed32",
+    descriptor_pb2.FieldDescriptorProto.TYPE_BOOL: "bool",
+    descriptor_pb2.FieldDescriptorProto.TYPE_STRING: "string",
+    descriptor_pb2.FieldDescriptorProto.TYPE_GROUP: "group",
+    descriptor_pb2.FieldDescriptorProto.TYPE_MESSAGE: "message",
+    descriptor_pb2.FieldDescriptorProto.TYPE_BYTES: "bytes",
+    descriptor_pb2.FieldDescriptorProto.TYPE_UINT32: "uint32",
+    descriptor_pb2.FieldDescriptorProto.TYPE_ENUM: "enum",
+    descriptor_pb2.FieldDescriptorProto.TYPE_SFIXED32: "sfixed32",
+    descriptor_pb2.FieldDescriptorProto.TYPE_SFIXED64: "sfixed64",
+    descriptor_pb2.FieldDescriptorProto.TYPE_SINT32: "sint32",
+    descriptor_pb2.FieldDescriptorProto.TYPE_SINT64: "sint64"
+}
+
+# Mapping of label types to human-readable strings
+LABEL_TYPES = {
+    descriptor_pb2.FieldDescriptorProto.LABEL_OPTIONAL: "optional",
+    descriptor_pb2.FieldDescriptorProto.LABEL_REQUIRED: "required",
+    descriptor_pb2.FieldDescriptorProto.LABEL_REPEATED: "repeated"
+}
 
 def get_service_methods(service_descriptor):
     """
@@ -42,8 +72,8 @@ def get_message_definition(descriptor_pool, message_descriptor):
             field_info = {
                 "name": field.name,
                 "number": field.number,
-                "type": field.type,
-                "label": field.label  # optional, repeated, or required
+                "type": FIELD_TYPES.get(field.type, f"unknown_type_{field.type}"),
+                "label": LABEL_TYPES.get(field.label, f"unknown_label_{field.label}")
             }
             fields.append(field_info)
         
