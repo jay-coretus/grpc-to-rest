@@ -1,0 +1,3 @@
+[submodule "leobrain_protos_new"]
+	path = leobrain_protos_new
+	url = git@github.com:coretus-technologies/leobrain_protos_new.git

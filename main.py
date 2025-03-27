@@ -23,7 +23,7 @@ app.add_middleware(
 # Simple service configuration
 GRPC_SERVICES = {
     "UserService": {
-        "endpoint_prefix": "/userservice",
+        "endpoint_prefix": "/api/userservice",
         "methods": {
             "SignUp": {
                 "path": "/sign-up",
@@ -39,6 +39,11 @@ GRPC_SERVICES = {
                 "path": "/forgot-password",
                 "request_class": user_pb2.ForgotPasswordReq,
                 "response_class": user_pb2.ActionResponse,
+            },
+            "CreateOrganization": {
+                "path": "/create-org",
+                "request_class": user_pb2.CreateOrganizationRequest,
+                "response_class": user_pb2.CreateOrganizationResponse,
             }
         },
     },
