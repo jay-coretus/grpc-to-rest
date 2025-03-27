@@ -28,21 +28,25 @@ GRPC_SERVICES = {
         "methods": {
             "SignUp": {
                 "path": "/sign-up",
+                "method": "POST",
                 "request_class": user_pb2.SignupUser,
                 "response_class": user_pb2.UsersResponse,
             },
             "SignIn": {
                 "path": "/sign-in",
+                "method": "POST",
                 "request_class": user_pb2.SignInReq,
                 "response_class": user_pb2.ActionResponse,
             },
             "ForgotPassword": {
                 "path": "/forgot-password",
+                "method": "POST",
                 "request_class": user_pb2.ForgotPasswordReq,
                 "response_class": user_pb2.ActionResponse,
             },
             "CreateOrganization": {
                 "path": "/create-org",
+                "method": "POST",
                 "request_class": user_pb2.CreateOrganizationRequest,
                 "response_class": user_pb2.CreateOrganizationResponse,
             }
@@ -53,11 +57,13 @@ GRPC_SERVICES = {
         "methods": {
             "RefreshToken": {
                 "path": "/refresh-token",
+                "method": "GET",
                 "request_class": auth_pb2.User,
                 "response_class": auth_pb2.RefreshTokenResponse
             },
             "GenerateToken": {
                 "path": "/generate-token",
+                "method": "GET",
                 "request_class": auth_pb2.User,
                 "response_class": auth_pb2.TokenResponse
             }
@@ -193,7 +199,7 @@ for service_name, service_config in GRPC_SERVICES.items():
         
         # Create and register the endpoint handler
         handler = create_endpoint_handler(service_name, method_name)
-        app.add_api_route(full_path, handler, methods=["POST"])
+        app.add_api_route(full_path, handler, methods=[method_config["method"]])
         
         logging.info(f"Registered static route for {service_name}.{method_name} at {full_path}")
 
