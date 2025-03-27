@@ -117,7 +117,12 @@ def main():
     
     # Pretty print the results
     import json
-    print(json.dumps(detailed_methods, indent=2))
+    # print(json.dumps(detailed_methods, indent=2))
+    # return json.loads(json.dumps(detailed_methods, indent=2))
+    return detailed_methods
 
 if __name__ == "__main__":
-    main()
+    from icecream import ic
+    from pprint import pprint
+    data = main()
+    print(data[0])
