@@ -400,53 +400,6 @@ def create_endpoint_handler(service_name: str, method_name: str):
             raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
     return handler
 
-
-# Composite Endpoint: SignUp + SignIn
-@app.post("/api/userservice/sign-up-and-sign-in")
-async def sign_up_and_sign_in(request: Request, request_data: Dict[str, Any] = Body(...)):
-    try:
-        stub = get_grpc_client("UserService")
-        metadata = extract_headers_for_metadata(request)
-
-        # 1. Call SignUp
-        sign_up_config = GRPC_SERVICES["UserService"]["methods"]["SignUp"]
-        sign_up_request = sign_up_config["request_class"](**request_data)
-        sign_up_response, sign_up_call_details = stub.SignUp.with_call(
-            sign_up_request, metadata=metadata
-        )
-        ic("SignUp completed", sign_up_response)
-
-        # 2. Call SignIn with the same data
-        sign_in_config = GRPC_SERVICES["UserService"]["methods"]["SignIn"]
-        sign_in_request = sign_in_config["request_class"](**request_data)
-        sign_in_response, sign_in_call_details = stub.SignIn.with_call(
-            sign_in_request, metadata=metadata
-        )
-        ic("SignIn completed", sign_in_response)
-
-        # Combine both responses
-        response_content = {
-            "sign_up": json_format.MessageToDict(
-                sign_up_response, preserving_proto_field_name=True
-            ),
-            "sign_in": json_format.MessageToDict(
-                sign_in_response, preserving_proto_field_name=True
-            )
-        }
-
-        # Return the combined response
-        return JSONResponse(content=response_content)
-
-    except grpc.RpcError as e:
-        grpc_code = e.code()
-        http_status_code = map_grpc_error_to_http_code(grpc_code)
-        detail = e.details() if hasattr(e, "details") else str(e)
-        logging.error(f"Composite gRPC call failed: {detail}")
-        raise HTTPException(status_code=http_status_code, detail=detail)
-    except Exception as e:
-        logging.exception(f"Error handling composite request: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-
 @app.post("/api/composite/signin-and-generate-token")
 async def composite_signin_and_generate_token(request: Request, request_data: Dict[str, Any] = Body(...)):
     try:
