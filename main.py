@@ -7,7 +7,7 @@ from typing import Dict, Any, List, Tuple
 from fastapi.middleware.cors import CORSMiddleware
 from icecream import ic
 # Import your generated proto modules
-from leobrain_protos_new.auth_service import auth_pb2
+from leobrain_protos_new.auth_service import auth_pb2, auth_pb2_grpc
 from protos import user_pb2_grpc, user_pb2
 from custom_methods.my_method import my_method
 
@@ -93,10 +93,12 @@ def get_grpc_client(service_name: str):
     """
     if service_name not in client_stubs:
         # Create the channel and stub
-        channel = grpc.insecure_channel("localhost:50052")
-
         if service_name == "UserService":
+            channel = grpc.insecure_channel("localhost:50052")
             client_stubs[service_name] = user_pb2_grpc.UserServiceStub(channel)
+        elif service_name == "AuthService":
+            channel = grpc.insecure_channel("localhost:50051")
+            client_stubs[service_name] = auth_pb2_grpc.AuthServiceStub(channel)
         else:
             raise KeyError(f"Unknown service: {service_name}")
 
