@@ -54,36 +54,40 @@ GRPC_SERVICES = {
     },
 }
 
-client_stubs = {}
-services = []
+# client_stubs = {}
+# services = []
 
-channel = grpc.insecure_channel("localhost:50052")
-client_stubs["UserService"] = user_pb2_grpc.UserServiceStub(channel)
-stub = client_stubs.get("UserService")
-ic(stub)
+# channel = grpc.insecure_channel("localhost:50052")
+# client_stubs["UserService"] = user_pb2_grpc.UserServiceStub(channel)
+# stub = client_stubs.get("UserService")
+# ic(stub)
 
-service_name = "UserService"
-method_name = "SignIn"
-method_cfg = GRPC_SERVICES[service_name]["methods"][method_name]
-ic(method_cfg)
+# service_name = "UserService"
+# method_name = "SignIn"
+# method_cfg = GRPC_SERVICES[service_name]["methods"][method_name]
+# ic(method_cfg)
 
-request: Request = {"email": "jay.gokani@coretus.com", "password": "Password@123"}
-metadata = []
-grpc_method = getattr(stub, method_name)
-ic(grpc_method)
+# request: Request = {"email": "jay.gokani@coretus.com", "password": "Password@123"}
+# metadata = []
+# grpc_method = getattr(stub, method_name)
+# ic(grpc_method)
 
-grpc_request = method_cfg["request_class"](**request)
-ic(grpc_request)
+# grpc_request = method_cfg["request_class"](**request)
+# ic(grpc_request)
 
-grpc_response, call_details = grpc_method.with_call(grpc_request, metadata=metadata)
-ic(grpc_response, call_details)
+# grpc_response, call_details = grpc_method.with_call(grpc_request, metadata=metadata)
+# ic(grpc_response, call_details)
 
-response_dict = json_format.MessageToDict(
-    grpc_response, preserving_proto_field_name=True
-)
-ic(response_dict)
+# response_dict = json_format.MessageToDict(
+#     grpc_response, preserving_proto_field_name=True
+# )
+# ic(response_dict)
 
 for service_name, service_config in GRPC_SERVICES.items():
-    # print(service_name, service_config)
+    ic(service_name)
     for method_name, method_config in service_config["methods"].items():
-        print(method_name, method_config)
+        ic(method_name, method_config)
+        ic(method_config["method"])
+        ic('-----------------------------------------------')
+
+    ic('-----------------------------------------------')

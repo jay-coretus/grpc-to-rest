@@ -9,6 +9,7 @@ from icecream import ic
 # Import your generated proto modules
 from leobrain_protos_new.auth_service import auth_pb2
 from protos import user_pb2_grpc, user_pb2
+from custom_methods.my_method import my_method
 
 # FastAPI app instance
 app = FastAPI()
@@ -37,6 +38,7 @@ GRPC_SERVICES = {
                 "method": "POST",
                 "request_class": user_pb2.SignInReq,
                 "response_class": user_pb2.ActionResponse,
+                "method_injection": my_method
             },
             "ForgotPassword": {
                 "path": "/forgot-password",
@@ -199,6 +201,10 @@ for service_name, service_config in GRPC_SERVICES.items():
         
         # Create and register the endpoint handler
         handler = create_endpoint_handler(service_name, method_name)
+        method = method_config.get('method_injection')
+        ic(method)
+        if method:
+           method() 
         app.add_api_route(full_path, handler, methods=[method_config["method"]])
         
         logging.info(f"Registered static route for {service_name}.{method_name} at {full_path}")
