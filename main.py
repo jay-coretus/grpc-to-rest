@@ -9,7 +9,7 @@ from icecream import ic
 # Import your generated proto modules
 from leobrain_protos_new.auth_service import auth_pb2, auth_pb2_grpc
 from protos import user_pb2_grpc, user_pb2
-from custom_methods.my_method import my_method
+from custom_methods.my_method import my_method, set_cookies
 
 # FastAPI app instance
 app = FastAPI()
@@ -39,7 +39,8 @@ GRPC_SERVICES = {
                 "method": "POST",
                 "request_class": user_pb2.SignInReq,
                 "response_class": user_pb2.ActionResponse,
-                "method_injection": my_method
+                "pre_method_injection": my_method,
+                "post_method_injection": set_cookies,
             },
             "ForgotPassword": {
                 "path": "/forgot-password",
@@ -282,7 +283,7 @@ def extract_headers_for_metadata(request: Request) -> List[Tuple[str, str]]:
     """
     metadata = []
     excluded_headers = {"host", "content-length", "content-type"}
-
+    excluded_headers = {}
     for header_name, header_value in request.headers.items():
         if header_name.lower() not in excluded_headers:
             metadata.append((header_name.lower(), header_value))
@@ -328,13 +329,10 @@ def create_endpoint_handler(service_name: str, method_name: str):
     async def handler(request: Request, request_data: Dict[str, Any] = Body(...)):
         method_cfg = GRPC_SERVICES[service_name]["methods"][method_name]
         
-        # Run custom logic if provided (e.g., for SignIn)
-        custom_logic = method_cfg.get("method_injection")
-        if callable(custom_logic):
-            # You can pass the request, request_data, or other context to your custom method.
-            # It can modify the request_data or perform validations as needed.
-            # For example:
-            custom_logic(request, request_data)
+        # Run custom logic before the gRPC call if provided
+        pre_logic = method_cfg.get("pre_method_injection")
+        if callable(pre_logic):
+            pre_logic(request, request_data)
         
         try:
             # Get the gRPC client
@@ -345,16 +343,14 @@ def create_endpoint_handler(service_name: str, method_name: str):
 
             # Extract metadata from headers
             metadata = extract_headers_for_metadata(request)
-
-            # Get the gRPC method
+            # Get the gRPC method from the stub
             grpc_method = getattr(stub, method_name)
 
             # Make the gRPC call with metadata
             grpc_response, call_details = grpc_method.with_call(
                 grpc_request, metadata=metadata
             )
-
-            # Convert response to dict
+            # Convert the gRPC response to a dict
             response_dict = json_format.MessageToDict(
                 grpc_response, preserving_proto_field_name=True
             )
@@ -366,13 +362,22 @@ def create_endpoint_handler(service_name: str, method_name: str):
                     response_headers["Set-Cookie"] = value
                 else:
                     response_headers[f"X-Grpc-{key}"] = value
-
-            # Create the response with headers
-            response = JSONResponse(content=response_dict)
-            for k, v in response_headers.items():
-                response.headers[k] = v
-
-            return response
+            
+            # Check if a post-method injection is provided (for example, to set cookies)
+            post_logic = method_cfg.get("post_method_injection")
+            if callable(post_logic):
+                # The post_logic function is expected to return a FastAPI Response with cookies set.
+                response = post_logic(grpc_response, call_details)
+                # Merge any additional headers if needed
+                for k, v in response_headers.items():
+                    response.headers[k] = v
+                return response
+            else:
+                # Otherwise, return a standard JSONResponse with headers
+                response = JSONResponse(content=response_dict)
+                for k, v in response_headers.items():
+                    response.headers[k] = v
+                return response
 
         except grpc.RpcError as e:
             grpc_code = e.code()
@@ -384,6 +389,7 @@ def create_endpoint_handler(service_name: str, method_name: str):
             logging.exception(f"Error handling request: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
     return handler
+
 
 # Composite Endpoint: SignUp + SignIn
 @app.post("/api/userservice/sign-up-and-sign-in")
