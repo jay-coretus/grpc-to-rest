@@ -139,11 +139,19 @@ def create_endpoint_handler(service_name: str, method_name: str):
     async def handler(request: Request, request_data: Dict[str, Any] = Body(...)):
         method_cfg = GRPC_SERVICES[service_name]["methods"][method_name]
         
+        # Run custom logic if provided (e.g., for SignIn)
+        custom_logic = method_cfg.get("method_injection")
+        if callable(custom_logic):
+            # You can pass the request, request_data, or other context to your custom method.
+            # It can modify the request_data or perform validations as needed.
+            # For example:
+            custom_logic(request, request_data)
+        
         try:
             # Get the gRPC client
             stub = get_grpc_client(service_name)
 
-            # Create the request object
+            # Create the gRPC request object from the request data
             grpc_request = method_cfg["request_class"](**request_data)
 
             # Extract metadata from headers
@@ -162,7 +170,7 @@ def create_endpoint_handler(service_name: str, method_name: str):
                 grpc_response, preserving_proto_field_name=True
             )
 
-            # Get trailing metadata for headers
+            # Process trailing metadata for headers
             response_headers = {}
             for key, value in call_details.trailing_metadata():
                 if key.lower() == "set-cookie":
@@ -201,10 +209,7 @@ for service_name, service_config in GRPC_SERVICES.items():
         
         # Create and register the endpoint handler
         handler = create_endpoint_handler(service_name, method_name)
-        method = method_config.get('method_injection')
-        ic(method)
-        if method:
-           method() 
+ 
         app.add_api_route(full_path, handler, methods=[method_config["method"]])
         
         logging.info(f"Registered static route for {service_name}.{method_name} at {full_path}")
