@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from icecream import ic
 # Import your generated proto modules
 from leobrain_protos_new.auth_service import auth_pb2, auth_pb2_grpc
-from protos import user_pb2_grpc, user_pb2
+from leobrain_protos_new.user_service import user_pb2_grpc, user_pb2
 from custom_methods.my_method import my_method, set_cookies
 
 # FastAPI app instance
@@ -127,12 +127,12 @@ GRPC_SERVICES = {
                 "request_class": user_pb2.DisplayUserRequest,
                 "response_class": user_pb2.DisplayUserResponse,
             },
-            # "SingleUserInfo": {
-            #     "path": "/single-user-info",
-            #     "method": "GET",
-            #     "request_class": user_pb2.SingleUserInfoRequest,
-            #     "response_class": user_pb2.SingleUserInfoResponse,
-            # },
+            "SingleUserInfo": {
+                "path": "/single-user-info",
+                "method": "GET",
+                "request_class": user_pb2.SingleUserInfoRequest,
+                "response_class": user_pb2.SingleUserInfoResponse,
+            },
             "RemoveUser": {
                 "path": "/remove-user",
                 "method": "DELETE",
@@ -211,12 +211,12 @@ GRPC_SERVICES = {
                 "request_class": user_pb2.EmptyRequest,
                 "response_class": user_pb2.ServicesResponse,
             },
-            # "ChangeDomain": {
-            #     "path": "/change-domain",
-            #     "method": "POST",
-            #     "request_class": user_pb2.ChangeDomainRequest,
-            #     "response_class": user_pb2.MessageResponse,
-            # }
+            "ChangeDomain": {
+                "path": "/change-domain",
+                "method": "POST",
+                "request_class": user_pb2.ChangeDomainRequest,
+                "response_class": user_pb2.MessageResponse,
+            }
         },
     },
     "AuthService": {
