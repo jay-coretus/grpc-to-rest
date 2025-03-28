@@ -447,6 +447,61 @@ async def sign_up_and_sign_in(request: Request, request_data: Dict[str, Any] = B
         logging.exception(f"Error handling composite request: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+@app.post("/api/composite/signin-and-generate-token")
+async def composite_signin_and_generate_token(request: Request, request_data: Dict[str, Any] = Body(...)):
+    try:
+        # Extract metadata (includes parsed cookies etc.)
+        metadata = extract_headers_for_metadata(request)
+        
+        # --- Call SignIn from UserService ---
+        user_stub = get_grpc_client("UserService")
+        sign_in_cfg = GRPC_SERVICES["UserService"]["methods"]["SignIn"]
+        # Create the SignIn request object (pre-method injection will run if defined)
+        sign_in_request = sign_in_cfg["request_class"](**request_data)
+        # Call SignIn with metadata
+        sign_in_response, sign_in_details = user_stub.SignIn.with_call(
+            sign_in_request, metadata=metadata
+        )
+        ic("SignIn completed", sign_in_response)
+        
+        # --- Call GenerateToken from AuthService ---
+        # Prepare request data for GenerateToken by removing unwanted fields.
+        generate_token_data = request_data.copy()
+        # Remove fields that are not part of the AuthService.User proto (e.g., "password")
+        generate_token_data.pop("password", None)
+        
+        auth_stub = get_grpc_client("AuthService")
+        generate_token_cfg = GRPC_SERVICES["AuthService"]["methods"]["GenerateToken"]
+        generate_token_request = generate_token_cfg["request_class"](**generate_token_data)
+        generate_token_response, generate_token_details = auth_stub.GenerateToken.with_call(
+            generate_token_request, metadata=metadata
+        )
+        ic("GenerateToken completed", generate_token_response)
+        
+        # Combine both responses into one JSON payload
+        response_content = {
+            "sign_in": json_format.MessageToDict(
+                sign_in_response, preserving_proto_field_name=True
+            ),
+            "generate_token": json_format.MessageToDict(
+                generate_token_response, preserving_proto_field_name=True
+            )
+        }
+        return JSONResponse(content=response_content)
+
+    except grpc.RpcError as e:
+        grpc_code = e.code()
+        http_status_code = map_grpc_error_to_http_code(grpc_code)
+        detail = e.details() if hasattr(e, "details") else str(e)
+        logging.error(f"Composite call failed: {detail}")
+        raise HTTPException(status_code=http_status_code, detail=detail)
+    except Exception as e:
+        logging.exception(f"Error handling composite request: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+
+
 # Register all individual gRPC routes
 for service_name, service_config in GRPC_SERVICES.items():
     for method_name, method_config in service_config["methods"].items():
