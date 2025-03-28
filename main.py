@@ -1,3 +1,4 @@
+from http.cookies import SimpleCookie
 import grpc
 from fastapi import FastAPI, HTTPException, Body, Request
 from fastapi.responses import JSONResponse
@@ -271,23 +272,32 @@ def get_grpc_client(service_name: str):
 def extract_headers_for_metadata(request: Request) -> List[Tuple[str, str]]:
     """
     Extract gRPC metadata from HTTP headers.
-
-    Args:
-        request (Request): The FastAPI request object.
-
-    Returns:
-        List[Tuple[str, str]]: A list of tuples containing the header name and value.
-
-    Note:
-        Excludes certain headers such as 'host', 'content-length', and 'content-type'.
+    Also parses the 'cookie' header and adds specific cookie values
+    as metadata keys ("accessToken", "refreshToken", "sessionId").
     """
     metadata = []
+    # Exclude these headers if needed
     excluded_headers = {"host", "content-length", "content-type"}
-    excluded_headers = {}
+    
     for header_name, header_value in request.headers.items():
-        if header_name.lower() not in excluded_headers:
-            metadata.append((header_name.lower(), header_value))
+        lower_name = header_name.lower()
+        if lower_name in excluded_headers:
+            continue
 
+        if lower_name == "cookie":
+            # Parse the cookie header
+            cookie = SimpleCookie()
+            cookie.load(header_value)
+            # Extract specific cookie values if they exist and add to metadata.
+            if "access_token" in cookie:
+                metadata.append(("access_token", cookie["access_token"].value))
+            if "refresh_token" in cookie:
+                metadata.append(("refresh_token", cookie["refresh_token"].value))
+            if "session_id" in cookie:
+                metadata.append(("session_id", cookie["session_id"].value))
+        else:
+            metadata.append((lower_name, header_value))
+    ic(metadata)
     return metadata
 
 def map_grpc_error_to_http_code(code: grpc.StatusCode) -> int:
