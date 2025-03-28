@@ -125,6 +125,30 @@ def extract_headers_for_metadata(request: Request) -> List[Tuple[str, str]]:
 
     return metadata
 
+def map_grpc_error_to_http_code(code: grpc.StatusCode) -> int:
+    """
+    Map a gRPC status code to an appropriate HTTP status code.
+    """
+    mapping = {
+         grpc.StatusCode.OK: 200,
+         grpc.StatusCode.CANCELLED: 499,
+         grpc.StatusCode.UNKNOWN: 500,
+         grpc.StatusCode.INVALID_ARGUMENT: 400,
+         grpc.StatusCode.DEADLINE_EXCEEDED: 504,
+         grpc.StatusCode.NOT_FOUND: 404,
+         grpc.StatusCode.ALREADY_EXISTS: 409,
+         grpc.StatusCode.PERMISSION_DENIED: 403,
+         grpc.StatusCode.RESOURCE_EXHAUSTED: 429,
+         grpc.StatusCode.FAILED_PRECONDITION: 400,
+         grpc.StatusCode.ABORTED: 409,
+         grpc.StatusCode.OUT_OF_RANGE: 400,
+         grpc.StatusCode.UNIMPLEMENTED: 501,
+         grpc.StatusCode.INTERNAL: 500,
+         grpc.StatusCode.UNAVAILABLE: 503,
+         grpc.StatusCode.DATA_LOSS: 500,
+         grpc.StatusCode.UNAUTHENTICATED: 401,
+    }
+    return mapping.get(code, 500)
 
 def create_endpoint_handler(service_name: str, method_name: str):
     """
@@ -187,19 +211,17 @@ def create_endpoint_handler(service_name: str, method_name: str):
             return response
 
         except grpc.RpcError as e:
-            status_code = e.code().value[0] if hasattr(e, "code") else 500
+            grpc_code = e.code()
+            http_status_code = map_grpc_error_to_http_code(grpc_code)
             detail = e.details() if hasattr(e, "details") else str(e)
             logging.error(f"gRPC call failed: {detail}")
-            raise HTTPException(status_code=status_code, detail=detail)
+            raise HTTPException(status_code=http_status_code, detail=detail)
         except Exception as e:
             logging.exception(f"Error handling request: {str(e)}")
-            raise HTTPException(
-                status_code=500, detail=f"Internal server error: {str(e)}"
-            )
-    
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
     return handler
 
-# composite method - combined methods
+# Composite Endpoint: SignUp + SignIn
 @app.post("/api/userservice/sign-up-and-sign-in")
 async def sign_up_and_sign_in(request: Request, request_data: Dict[str, Any] = Body(...)):
     try:
@@ -236,26 +258,19 @@ async def sign_up_and_sign_in(request: Request, request_data: Dict[str, Any] = B
         return JSONResponse(content=response_content)
 
     except grpc.RpcError as e:
-        status_code = e.code().value[0] if hasattr(e, "code") else 500
+        grpc_code = e.code()
+        http_status_code = map_grpc_error_to_http_code(grpc_code)
         detail = e.details() if hasattr(e, "details") else str(e)
-        logging.error(f"gRPC call failed: {detail}")
-        raise HTTPException(status_code=status_code, detail=detail)
+        logging.error(f"Composite gRPC call failed: {detail}")
+        raise HTTPException(status_code=http_status_code, detail=detail)
     except Exception as e:
         logging.exception(f"Error handling composite request: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Internal server error: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
-
-# Register all gRPC routes
+# Register all individual gRPC routes
 for service_name, service_config in GRPC_SERVICES.items():
     for method_name, method_config in service_config["methods"].items():
-        endpoint_path = method_config["path"]
-        
-        # Create the full path by combining prefix and method path
-        full_path = f"{service_config['endpoint_prefix']}{endpoint_path}"
-        
-        # Create and register the endpoint handler
+        full_path = f"{service_config['endpoint_prefix']}{method_config['path']}"
         handler = create_endpoint_handler(service_name, method_name)
  
         app.add_api_route(full_path, handler, methods=[method_config["method"]])
