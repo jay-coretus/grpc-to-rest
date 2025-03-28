@@ -13,6 +13,7 @@ from custom_methods.my_method import my_method
 
 # FastAPI app instance
 app = FastAPI()
+
 # Add CORS middleware to allow any and every request
 app.add_middleware(
     CORSMiddleware,
@@ -198,8 +199,55 @@ def create_endpoint_handler(service_name: str, method_name: str):
     
     return handler
 
+# composite method - combined methods
+@app.post("/api/userservice/sign-up-and-sign-in")
+async def sign_up_and_sign_in(request: Request, request_data: Dict[str, Any] = Body(...)):
+    try:
+        stub = get_grpc_client("UserService")
+        metadata = extract_headers_for_metadata(request)
 
-# Create static routes for each gRPC method in the configuration
+        # 1. Call SignUp
+        sign_up_config = GRPC_SERVICES["UserService"]["methods"]["SignUp"]
+        sign_up_request = sign_up_config["request_class"](**request_data)
+        sign_up_response, sign_up_call_details = stub.SignUp.with_call(
+            sign_up_request, metadata=metadata
+        )
+        ic("SignUp completed", sign_up_response)
+
+        # 2. Call SignIn with the same data
+        sign_in_config = GRPC_SERVICES["UserService"]["methods"]["SignIn"]
+        sign_in_request = sign_in_config["request_class"](**request_data)
+        sign_in_response, sign_in_call_details = stub.SignIn.with_call(
+            sign_in_request, metadata=metadata
+        )
+        ic("SignIn completed", sign_in_response)
+
+        # Combine both responses
+        response_content = {
+            "sign_up": json_format.MessageToDict(
+                sign_up_response, preserving_proto_field_name=True
+            ),
+            "sign_in": json_format.MessageToDict(
+                sign_in_response, preserving_proto_field_name=True
+            )
+        }
+
+        # Return the combined response
+        return JSONResponse(content=response_content)
+
+    except grpc.RpcError as e:
+        status_code = e.code().value[0] if hasattr(e, "code") else 500
+        detail = e.details() if hasattr(e, "details") else str(e)
+        logging.error(f"gRPC call failed: {detail}")
+        raise HTTPException(status_code=status_code, detail=detail)
+    except Exception as e:
+        logging.exception(f"Error handling composite request: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        )
+
+
+# Register all gRPC routes
 for service_name, service_config in GRPC_SERVICES.items():
     for method_name, method_config in service_config["methods"].items():
         endpoint_path = method_config["path"]
